@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir \
     boto3
 
 # Copy application code
-COPY app.py ${LAMBDA_TASK_ROOT}/
+COPY lambda_function.py ${LAMBDA_TASK_ROOT}/
 COPY schema.sql ${LAMBDA_TASK_ROOT}/
 
 # Set the handler
