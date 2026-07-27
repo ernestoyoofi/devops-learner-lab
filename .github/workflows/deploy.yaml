@@ -1,0 +1,84 @@
+# =============================================================================
+# TechnoDev - CD Pipeline
+# LKS Nasional 2026 · Cloud Computing · Modul 3
+# Task 17: Build, push ECR, update Lambda, deploy Amplify, smoke test
+# =============================================================================
+
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-west-2
+  PREFIX: devops
+  ECR_REGISTRY: ""  # Set dynamically in first step
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "ACCOUNT_ID=${ACCOUNT_ID}" >> $GITHUB_ENV
+          echo "ECR_REGISTRY=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> $GITHUB_ENV
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${AWS_REGION} | \
+            docker login --username AWS --password-stdin ${ECR_REGISTRY}
+
+      # ----------------------------------------------------------------
+      # Build Docker images
+      # ----------------------------------------------------------------
+      - name: Build Docker image - user-api
+        run: |
+          docker build -t ${ECR_REGISTRY}/${PREFIX}/user-api:latest \
+                       -t ${ECR_REGISTRY}/${PREFIX}/user-api:${GITHUB_SHA::8} \
+                       lambda/user-api/
+
+      - name: Build Docker image - order-api
+        run: |
+          docker build -t ${ECR_REGISTRY}/${PREFIX}/order-api:latest \
+                       -t ${ECR_REGISTRY}/${PREFIX}/order-api:${GITHUB_SHA::8} \
+                       lambda/order-api/
+
+      - name: Build Docker image - notification-worker
+        run: |
+          docker build -t ${ECR_REGISTRY}/${PREFIX}/notif-worker:latest \
+                       -t ${ECR_REGISTRY}/${PREFIX}/notif-worker:${GITHUB_SHA::8} \
+                       lambda/notification-worker/
+
+      - name: Build Docker image - websocket-api
+        run: |
+          docker build -t ${ECR_REGISTRY}/${PREFIX}/websocket-api:latest \
+                       -t ${ECR_REGISTRY}/${PREFIX}/websocket-api:${GITHUB_SHA::8} \
+                       lambda/websocket-api/
+
+      # ----------------------------------------------------------------
+      # Push to ECR
+      # ----------------------------------------------------------------
+      - name: Push user-api to ECR
+        run: |
+          docker push ${ECR_REGISTRY}/${PREFIX}/user-api:latest
+          docker push ${ECR_REGISTRY}/${PREFIX}/user-api:${GITHUB_SHA::8}
+
+      - name: Push order-api to ECR
+        run: |
+          docker push ${ECR_REGISTRY}/${PREFIX}/order-api:latest
+          docker push ${ECR_REGISTRY}/${PREFIX}/order-api:${GITHUB_SHA::8}
+
+      - name: Push notification-worker to ECR
+        run: |
+          docker push ${ECR_REGISTRY}/${PREFIX}/notif-worker:latest
+          docker push ${ECR_REGISTRY}/${PREFIX}/notif-worker:${GITHUB_SHA::8}
+
+      - name: Push websocket-api to ECR
+        run: |
+          docker push ${ECR_REGISTRY}/${PREFIX}/websocket-api:latest
+          docker push ${ECR_REGISTRY}/${PREFIX}/websocket-api:${GITHUB_SHA::8}
