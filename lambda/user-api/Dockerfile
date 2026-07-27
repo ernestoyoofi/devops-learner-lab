@@ -10,4 +10,4 @@ COPY app.py ${LAMBDA_TASK_ROOT}/
 COPY schema.sql ${LAMBDA_TASK_ROOT}/
 
 # Set the handler
-CMD ["app.handler"]
+CMD ["lambda_function.handler"]
